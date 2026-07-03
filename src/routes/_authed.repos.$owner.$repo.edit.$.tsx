@@ -1,11 +1,15 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import Editor from "@monaco-editor/react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { getOctokit } from "@/features/auth/session";
+import { SaveDialog } from "@/features/editor/save-dialog";
 import { SwaggerPreview } from "@/features/editor/swagger-preview";
 import { useDebouncedValue } from "@/features/editor/use-debounced-value";
-import { fileQuery } from "@/features/explorer/queries";
+import { fileQuery, treeQuery } from "@/features/explorer/queries";
+import { classifyGithubError, saveFileContent } from "@/lib/github";
 
 export const Route = createFileRoute("/_authed/repos/$owner/$repo/edit/$")({
   validateSearch: (search: Record<string, unknown>): { ref: string } => ({
@@ -27,13 +31,57 @@ function EditPage() {
   const [text, setText] = useState(file.text);
   const [sha, setSha] = useState(file.sha);
   const [savedText, setSavedText] = useState(file.text);
-  void sha;
-  void setSha;
-  void setSavedText; // 以上三行 Task 9 保存流程接入后删除
   const debouncedText = useDebouncedValue(text, 500);
 
   const language = filePath.endsWith(".json") ? "json" : "yaml";
   const dirty = text !== savedText;
+
+  const [saveOpen, setSaveOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const fileName = filePath.split("/").at(-1) ?? filePath;
+
+  const save = useMutation({
+    mutationFn: (message: string) =>
+      saveFileContent(getOctokit(), {
+        owner,
+        repo,
+        path: filePath,
+        branch: ref,
+        content: text,
+        sha,
+        message,
+      }),
+    onSuccess: (newSha) => {
+      setSha(newSha);
+      setSavedText(text);
+      setSaveOpen(false);
+      toast.success("已提交到 GitHub");
+      queryClient.setQueryData(fileQuery(owner, repo, filePath, ref).queryKey, {
+        text,
+        sha: newSha,
+      });
+      void queryClient.invalidateQueries({ queryKey: treeQuery(owner, repo, ref).queryKey });
+    },
+    onError: (err) => {
+      const kind = classifyGithubError(err);
+      if (kind === "conflict") {
+        toast.error("远端已更新，请刷新获取最新内容后重试", {
+          action: {
+            label: "刷新（丢弃本地改动）",
+            onClick: () => {
+              void queryClient
+                .invalidateQueries({ queryKey: fileQuery(owner, repo, filePath, ref).queryKey })
+                .then(() => window.location.reload());
+            },
+          },
+        });
+      } else if (kind === "rate-limited") {
+        toast.error("GitHub API 触发限流，请稍后重试");
+      } else {
+        toast.error(`提交失败：${err instanceof Error ? err.message : String(err)}`);
+      }
+    },
+  });
 
   return (
     <div className="flex h-svh flex-col">
@@ -51,7 +99,9 @@ function EditPage() {
             {owner}/{repo} · {filePath} @ {ref}
           </span>
         </div>
-        <Button disabled={!dirty}>保存{dirty ? "" : "（无改动）"}</Button>
+        <Button disabled={!dirty} onClick={() => setSaveOpen(true)}>
+          保存
+        </Button>
       </header>
       <div className="grid min-h-0 flex-1 grid-cols-2">
         <div className="min-w-0 border-r">
@@ -67,6 +117,13 @@ function EditPage() {
           <SwaggerPreview source={debouncedText} />
         </div>
       </div>
+      <SaveDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        defaultMessage={`docs: update ${fileName}`}
+        pending={save.isPending}
+        onConfirm={(message) => save.mutate(message)}
+      />
     </div>
   );
 }

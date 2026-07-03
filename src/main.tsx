@@ -1,11 +1,22 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { clearToken } from "@/features/auth/session";
+import { classifyGithubError } from "@/lib/github";
 import { routeTree } from "./routeTree.gen";
 import "./style.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (err) => {
+      if (classifyGithubError(err) === "unauthorized") {
+        clearToken();
+        window.location.assign("/auth");
+      }
+    },
+  }),
+});
 
 const router = createRouter({ routeTree, context: { queryClient } });
 
