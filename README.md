@@ -1,6 +1,6 @@
 # 基于 GitHub 的 Swagger/OpenAPI 文档管理系统
 
-> **文件类型：** 架构设计方案 | **状态：** 提案 | **目标架构：** 无服务端纯前端应用 (Serverless SPA)
+> **文件类型：** 架构设计方案 | **状态：** 实施中 | **目标架构：** 无服务端纯前端应用 (Serverless SPA)
 
 ## 1. 项目概述与核心愿景
 
@@ -98,3 +98,45 @@
 
 1. **多分支协作流水线：** 支持直接从当前文档切出 `feat/api-update` 新分支，编辑完成后在前端一键向主分支提起 Pull Request，将 API 评审完全融入现有的 GitHub Code Review 研发流。
 2. **Webhooks 联动：** 可配置仓库的 Webhook，当主分支文档变更时，自动触发企业微信、钉钉或 Slack 通知的发送，彻底打通研发生态圈。
+
+---
+
+## 7. 实施细则（2026-07 确认）
+
+完整设计文档见 `docs/superpowers/specs/2026-07-03-openapi-doc-manager-design.md`。
+
+### 7.1 分期计划
+
+- **MVP（已实现）：** PAT 登录 → 仓库列表 → 分支 + OpenAPI 文件树 → Monaco + swagger-ui 双栏编辑 → 提交保存。
+- **二期：** 版本时间轴（listCommits + 历史 diff + 一键回滚）、Spectral 实时校验、OAuth Exchange 函数（可选）、部署上线（GitHub Pages / Vercel）。
+- **三期：** 409 冲突三方可视化合并（jsdiff）、多分支协作（前端发起 PR）、Webhooks 通知联动。
+
+### 7.2 关键决策
+
+| 决策点   | 结论                                                              |
+| :------- | :---------------------------------------------------------------- |
+| 鉴权     | 仅 Fine-grained PAT，存 localStorage（key：`openapi.github.pat`） |
+| 路由     | TanStack Router 文件式路由；分支经 `?ref=` search param 传递      |
+| 编辑器   | Monaco（左）+ swagger-ui-react（右，只读预览）                    |
+| 冲突处理 | MVP 降级：409 时提示「远端已更新，请刷新后重试」                  |
+| UI       | shadcn/ui + 官方 blocks（login-01 等）改造                        |
+
+### 7.3 目录结构
+
+    src/
+    ├── routes/          # TanStack Router 文件式路由（装配、loader、守卫）
+    ├── features/
+    │   ├── auth/        # PAT 会话、登录表单
+    │   ├── explorer/    # 仓库列表、分支选择、文件树、Query 工厂
+    │   └── editor/      # Monaco、swagger 预览、保存对话框
+    ├── lib/
+    │   ├── github.ts    # Octokit 封装、Base64、错误分类
+    │   └── openapi.ts   # 文档解析与 OpenAPI 识别
+    └── components/ui/   # shadcn/ui 组件
+
+### 7.4 本地开发
+
+    vp install   # 安装依赖
+    vp dev       # 启动开发服务器
+    vp check     # 格式化 / lint / 类型检查
+    vp test      # 运行测试
