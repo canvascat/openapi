@@ -25,4 +25,5 @@ export const fileQuery = (owner: string, repo: string, path: string, ref: string
     queryKey: ["file", owner, repo, path, ref],
     queryFn: () => getFileContent(getOctokit(), { owner, repo, path, ref }),
     staleTime: 0,
+    gcTime: 0,
   });

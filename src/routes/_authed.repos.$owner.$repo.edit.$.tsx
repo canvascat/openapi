@@ -4,7 +4,7 @@ import Editor from "@monaco-editor/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getOctokit } from "@/features/auth/session";
+import { clearToken, getOctokit } from "@/features/auth/session";
 import { SaveDialog } from "@/features/editor/save-dialog";
 import { SwaggerPreview } from "@/features/editor/swagger-preview";
 import { useDebouncedValue } from "@/features/editor/use-debounced-value";
@@ -64,6 +64,11 @@ function EditPage() {
     },
     onError: (err) => {
       const kind = classifyGithubError(err);
+      if (kind === "unauthorized") {
+        clearToken();
+        window.location.assign("/auth");
+        return;
+      }
       if (kind === "conflict") {
         toast.error("远端已更新，请刷新获取最新内容后重试", {
           action: {
@@ -76,7 +81,7 @@ function EditPage() {
           },
         });
       } else if (kind === "rate-limited") {
-        toast.error("GitHub API 触发限流，请稍后重试");
+        toast.error("GitHub 拒绝请求：可能触发限流，或 Token 缺少仓库 Contents 写权限");
       } else {
         toast.error(`提交失败：${err instanceof Error ? err.message : String(err)}`);
       }

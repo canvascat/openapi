@@ -117,6 +117,9 @@ export async function getFileContent(
   if (Array.isArray(data) || data.type !== "file") {
     throw new Error(`不是文件：${opts.path}`);
   }
+  if (data.size === 0) {
+    return { text: "", sha: data.sha };
+  }
   if (data.encoding !== "base64" || data.content === "") {
     throw new Error("文件超过 1MB，暂不支持在线编辑");
   }

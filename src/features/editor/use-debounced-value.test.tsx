@@ -16,10 +16,14 @@ describe("useDebouncedValue", () => {
     rerender({ value: "b" });
     expect(result.current).toBe("a");
 
-    act(() => vi.advanceTimersByTime(499));
+    act(() => {
+      vi.advanceTimersByTime(499);
+    });
     expect(result.current).toBe("a");
 
-    act(() => vi.advanceTimersByTime(1));
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
     expect(result.current).toBe("b");
   });
 
@@ -28,9 +32,13 @@ describe("useDebouncedValue", () => {
       initialProps: { value: "a" },
     });
     rerender({ value: "b" });
-    act(() => vi.advanceTimersByTime(300));
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     rerender({ value: "c" });
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(result.current).toBe("c");
   });
 });
