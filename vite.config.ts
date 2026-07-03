@@ -14,6 +14,9 @@ export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
+  test: {
+    setupFiles: ["./vitest.setup.ts"],
+  },
   fmt: {
     ignorePatterns: ["src/routeTree.gen.ts"],
   },
