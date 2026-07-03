@@ -40,7 +40,7 @@ export function SaveDialog({
           <DialogDescription>此次保存将作为一次 Git Commit 写入当前分支。</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="commit-message">Commit message</Label>
+          <Label htmlFor="commit-message">提交说明</Label>
           <Input id="commit-message" value={message} onChange={(e) => setMessage(e.target.value)} />
         </div>
         <DialogFooter>

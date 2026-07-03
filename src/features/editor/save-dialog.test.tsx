@@ -15,7 +15,7 @@ describe("SaveDialog", () => {
         onConfirm={onConfirm}
       />,
     );
-    const input = screen.getByLabelText<HTMLInputElement>("Commit message");
+    const input = screen.getByLabelText<HTMLInputElement>("提交说明");
     expect(input.value).toBe("docs: update pet.yaml");
     fireEvent.change(input, { target: { value: "docs: 调整宠物接口" } });
     fireEvent.click(screen.getByRole("button", { name: "提交" }));
