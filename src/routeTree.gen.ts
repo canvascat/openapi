@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedReposIndexRouteImport } from './routes/_authed.repos.index'
+import { Route as AuthedReposOwnerRepoIndexRouteImport } from './routes/_authed.repos.$owner.$repo.index'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -33,16 +34,24 @@ const AuthedReposIndexRoute = AuthedReposIndexRouteImport.update({
   path: '/repos/',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedReposOwnerRepoIndexRoute =
+  AuthedReposOwnerRepoIndexRouteImport.update({
+    id: '/repos/$owner/$repo/',
+    path: '/repos/$owner/$repo/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/repos/': typeof AuthedReposIndexRoute
+  '/repos/$owner/$repo/': typeof AuthedReposOwnerRepoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/repos': typeof AuthedReposIndexRoute
+  '/repos/$owner/$repo': typeof AuthedReposOwnerRepoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +59,20 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authed/repos/': typeof AuthedReposIndexRoute
+  '/_authed/repos/$owner/$repo/': typeof AuthedReposOwnerRepoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/repos/'
+  fullPaths: '/' | '/auth' | '/repos/' | '/repos/$owner/$repo/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/repos'
-  id: '__root__' | '/' | '/_authed' | '/auth' | '/_authed/repos/'
+  to: '/' | '/auth' | '/repos' | '/repos/$owner/$repo'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/auth'
+    | '/_authed/repos/'
+    | '/_authed/repos/$owner/$repo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,15 +111,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedReposIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/repos/$owner/$repo/': {
+      id: '/_authed/repos/$owner/$repo/'
+      path: '/repos/$owner/$repo'
+      fullPath: '/repos/$owner/$repo/'
+      preLoaderRoute: typeof AuthedReposOwnerRepoIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
   AuthedReposIndexRoute: typeof AuthedReposIndexRoute
+  AuthedReposOwnerRepoIndexRoute: typeof AuthedReposOwnerRepoIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedReposIndexRoute: AuthedReposIndexRoute,
+  AuthedReposOwnerRepoIndexRoute: AuthedReposOwnerRepoIndexRoute,
 }
 
 const AuthedRouteWithChildren =
