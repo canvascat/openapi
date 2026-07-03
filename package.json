@@ -7,7 +7,9 @@
     "dev": "vp dev",
     "build": "tsc && vp build",
     "preview": "vp preview",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "lint": "vp lint --fix",
+    "format": "vp fmt . --write"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
