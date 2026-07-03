@@ -66,7 +66,7 @@ function EditPage() {
       const kind = classifyGithubError(err);
       if (kind === "unauthorized") {
         clearToken();
-        window.location.assign("/auth");
+        window.location.assign(`${import.meta.env.BASE_URL}auth`);
         return;
       }
       if (kind === "conflict") {

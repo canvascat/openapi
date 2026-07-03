@@ -12,13 +12,17 @@ const queryClient = new QueryClient({
     onError: (err) => {
       if (classifyGithubError(err) === "unauthorized") {
         clearToken();
-        window.location.assign("/auth");
+        window.location.assign(`${import.meta.env.BASE_URL}auth`);
       }
     },
   }),
 });
 
-const router = createRouter({ routeTree, context: { queryClient } });
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  basepath: import.meta.env.BASE_URL,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

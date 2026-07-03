@@ -4,9 +4,17 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  base: "/openapi/",
   plugins: [tanstackRouter({ target: "react", autoCodeSplitting: true }), react(), tailwindcss()],
   resolve: {
     tsconfigPaths: true,
+  },
+  run: {
+    tasks: {
+      check: "vp check",
+      test: "vp test",
+      build: "vp build",
+    },
   },
   staged: {
     "*": "vp check --fix",
