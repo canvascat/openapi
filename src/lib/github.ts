@@ -153,3 +153,53 @@ export async function saveFileContent(
   }
   return newSha;
 }
+
+export interface CommitSummary {
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName: string;
+  authorDate: string | null;
+  parentSha: string | null;
+}
+
+interface RawCommit {
+  sha: string;
+  commit: {
+    message: string;
+    author?: { name?: string | null; date?: string | null } | null;
+  };
+  parents: readonly { sha: string }[];
+}
+
+export function mapCommit(raw: RawCommit): CommitSummary {
+  return {
+    sha: raw.sha,
+    shortSha: raw.sha.slice(0, 7),
+    message: raw.commit.message,
+    authorName: raw.commit.author?.name ?? "未知作者",
+    authorDate: raw.commit.author?.date ?? null,
+    parentSha: raw.parents[0]?.sha ?? null,
+  };
+}
+
+export const COMMITS_PAGE_SIZE = 20;
+
+export async function listFileCommits(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  path: string,
+  ref: string,
+  page: number,
+): Promise<CommitSummary[]> {
+  const { data } = await octokit.repos.listCommits({
+    owner,
+    repo,
+    path,
+    sha: ref,
+    per_page: COMMITS_PAGE_SIZE,
+    page,
+  });
+  return data.map((c) => mapCommit(c));
+}
