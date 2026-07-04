@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import Editor from "@monaco-editor/react";
-import { useState } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { SaveDialog } from "@/features/editor/save-dialog";
 import { SwaggerPreview } from "@/features/editor/swagger-preview";
 import { useDebouncedValue } from "@/features/editor/use-debounced-value";
 import { fileQuery, treeQuery } from "@/features/explorer/queries";
+import { ProblemsPanel } from "@/features/lint/problems-panel";
+import { useLint } from "@/features/lint/use-lint";
 import { classifyGithubError, saveFileContent } from "@/lib/github";
 
 export const Route = createFileRoute("/_authed/repos/$owner/$repo/edit/$")({
@@ -34,6 +36,31 @@ function EditPage() {
   const [sha, setSha] = useState(file.sha);
   const [savedText, setSavedText] = useState(file.text);
   const debouncedText = useDebouncedValue(text, 500);
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
+  const { diagnostics, status: lintStatus } = useLint(debouncedText);
+
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    const model = editorRef.current?.getModel();
+    if (!monaco || !model) {
+      return;
+    }
+    const markers = diagnostics.map((d) => ({
+      startLineNumber: d.line,
+      startColumn: d.column,
+      endLineNumber: d.endLine,
+      endColumn: d.endColumn,
+      message: `${d.message} (${d.code})`,
+      severity:
+        d.severity === "error"
+          ? monaco.MarkerSeverity.Error
+          : d.severity === "warning"
+            ? monaco.MarkerSeverity.Warning
+            : monaco.MarkerSeverity.Info,
+    }));
+    monaco.editor.setModelMarkers(model, "spectral", markers);
+  }, [diagnostics]);
 
   const language = filePath.endsWith(".json") ? "json" : "yaml";
   const dirty = text !== savedText;
@@ -118,13 +145,28 @@ function EditPage() {
         </div>
       </header>
       <div className="grid min-h-0 flex-1 grid-cols-2">
-        <div className="min-w-0 border-r">
-          <Editor
-            height="100%"
-            language={language}
-            value={text}
-            onChange={(value) => setText(value ?? "")}
-            options={{ minimap: { enabled: false }, wordWrap: "on" }}
+        <div className="grid min-w-0 grid-rows-[1fr_auto] border-r">
+          <div className="min-h-0">
+            <Editor
+              height="100%"
+              language={language}
+              value={text}
+              onChange={(value) => setText(value ?? "")}
+              onMount={(editor, monaco) => {
+                editorRef.current = editor;
+                monacoRef.current = monaco;
+              }}
+              options={{ minimap: { enabled: false }, wordWrap: "on" }}
+            />
+          </div>
+          <ProblemsPanel
+            diagnostics={diagnostics}
+            status={lintStatus}
+            onGoto={(line, column) => {
+              editorRef.current?.revealLineInCenter(line);
+              editorRef.current?.setPosition({ lineNumber: line, column });
+              editorRef.current?.focus();
+            }}
           />
         </div>
         <div className="min-w-0 overflow-y-auto bg-white">
