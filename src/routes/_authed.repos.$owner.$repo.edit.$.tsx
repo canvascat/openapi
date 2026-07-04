@@ -3,8 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import Editor from "@monaco-editor/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clearToken, getOctokit } from "@/features/auth/session";
+import { HistorySheet } from "@/features/history/history-sheet";
 import { SaveDialog } from "@/features/editor/save-dialog";
 import { SwaggerPreview } from "@/features/editor/swagger-preview";
 import { useDebouncedValue } from "@/features/editor/use-debounced-value";
@@ -37,6 +39,7 @@ function EditPage() {
   const dirty = text !== savedText;
 
   const [saveOpen, setSaveOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const queryClient = useQueryClient();
   const fileName = filePath.split("/").at(-1) ?? filePath;
 
@@ -104,9 +107,15 @@ function EditPage() {
             {owner}/{repo} · {filePath} @ {ref}
           </span>
         </div>
-        <Button disabled={!dirty} onClick={() => setSaveOpen(true)}>
-          保存
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+            <History className="size-4" />
+            历史
+          </Button>
+          <Button disabled={!dirty} onClick={() => setSaveOpen(true)}>
+            保存
+          </Button>
+        </div>
       </header>
       <div className="grid min-h-0 flex-1 grid-cols-2">
         <div className="min-w-0 border-r">
@@ -128,6 +137,20 @@ function EditPage() {
         defaultMessage={`docs: update ${fileName}`}
         pending={save.isPending}
         onConfirm={(message) => save.mutate(message)}
+      />
+      <HistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        owner={owner}
+        repo={repo}
+        path={filePath}
+        gitRef={ref}
+        currentText={text}
+        onRestore={(restoredText, shortSha) => {
+          setText(restoredText);
+          setHistoryOpen(false);
+          toast.info(`已载入 ${shortSha} 版本，保存提交后完成回滚`);
+        }}
       />
     </div>
   );
