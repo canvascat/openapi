@@ -2,7 +2,7 @@ import { DiffEditor } from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { fileQuery } from "@/features/explorer/queries";
-import type { CommitSummary } from "@/lib/github";
+import { classifyGithubError, type CommitSummary } from "@/lib/github";
 
 export type DiffBaseline = "parent" | "current";
 
@@ -23,28 +23,31 @@ export function CommitDiff({
   baseline: DiffBaseline;
   onRestore: (text: string) => void;
 }) {
-  const version = useQuery(fileQuery(owner, repo, path, commit.sha));
+  const version = useQuery({ ...fileQuery(owner, repo, path, commit.sha), retry: false });
   const needParent = baseline === "parent" && commit.parentSha !== null;
   const parent = useQuery({
     ...fileQuery(owner, repo, path, commit.parentSha ?? ""),
     enabled: needParent,
+    retry: false,
   });
+  const parentMissing =
+    needParent && parent.isError && classifyGithubError(parent.error) === "not-found";
 
   if (version.isError) {
     return (
       <p className="p-4 text-sm text-destructive">加载版本内容失败：{version.error.message}</p>
     );
   }
-  if (needParent && parent.isError) {
+  if (needParent && parent.isError && !parentMissing) {
     return <p className="p-4 text-sm text-destructive">加载对比基准失败：{parent.error.message}</p>;
   }
-  if (version.isPending || (needParent && parent.isPending)) {
+  if (version.isPending || (needParent && !parentMissing && parent.isPending)) {
     return <p className="p-4 text-sm text-muted-foreground">加载版本内容...</p>;
   }
 
   const original =
     baseline === "parent"
-      ? commit.parentSha === null
+      ? commit.parentSha === null || parentMissing
         ? ""
         : parent.data!.text
       : version.data.text;

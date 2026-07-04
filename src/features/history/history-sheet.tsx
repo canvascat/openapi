@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -41,17 +41,18 @@ export function HistorySheet({
     enabled: open,
   });
 
+  useEffect(() => {
+    if (!open) {
+      setSelected(null);
+    }
+  }, [open]);
+
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          setSelected(null);
-        }
-        onOpenChange(next);
-      }}
-    >
-      <SheetContent side="right" className="flex w-full flex-col gap-4 p-4 sm:max-w-3xl">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="flex flex-col gap-4 p-4 data-[side=right]:w-full data-[side=right]:sm:max-w-3xl"
+      >
         <SheetHeader className="p-0">
           <SheetTitle>
             {selected ? `${selected.shortSha} · ${selected.message.split("\n")[0]}` : "提交历史"}
