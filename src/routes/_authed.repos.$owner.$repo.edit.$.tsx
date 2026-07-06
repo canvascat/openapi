@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import Editor, { type OnMount } from "@monaco-editor/react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { History } from "lucide-react";
+import { Code, History, LayoutList } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { clearToken, getOctokit } from "@/features/auth/session";
 import { HistorySheet } from "@/features/history/history-sheet";
 import { SaveDialog } from "@/features/editor/save-dialog";
@@ -14,6 +15,8 @@ import { fileQuery, treeQuery } from "@/features/explorer/queries";
 import { ProblemsPanel } from "@/features/lint/problems-panel";
 import { useLint } from "@/features/lint/use-lint";
 import { classifyGithubError, saveFileContent } from "@/lib/github";
+
+const VisualView = lazy(() => import("@/features/visual/visual-view"));
 
 export const Route = createFileRoute("/_authed/repos/$owner/$repo/edit/$")({
   validateSearch: (search: Record<string, unknown>): { ref: string } => ({
@@ -73,6 +76,7 @@ function EditPage() {
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"code" | "visual">("code");
   const queryClient = useQueryClient();
   const fileName = filePath.split("/").at(-1) ?? filePath;
 
@@ -141,6 +145,26 @@ function EditPage() {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={viewMode}
+            onValueChange={(value) => {
+              if (value) {
+                setViewMode(value as "code" | "visual");
+              }
+            }}
+          >
+            <ToggleGroupItem value="code" aria-label="源码模式">
+              <Code className="size-4" />
+              源码
+            </ToggleGroupItem>
+            <ToggleGroupItem value="visual" aria-label="可视模式">
+              <LayoutList className="size-4" />
+              可视
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Button variant="outline" onClick={() => setHistoryOpen(true)}>
             <History className="size-4" />
             历史
@@ -150,35 +174,45 @@ function EditPage() {
           </Button>
         </div>
       </header>
-      <div className="grid min-h-0 flex-1 grid-cols-2">
-        <div className="grid min-w-0 grid-rows-[1fr_auto] border-r">
-          <div className="min-h-0">
-            <Editor
-              height="100%"
-              language={language}
-              value={text}
-              onChange={(value) => setText(value ?? "")}
-              onMount={(editor, monaco) => {
-                editorRef.current = editor;
-                monacoRef.current = monaco;
+      {viewMode === "code" ? (
+        <div className="grid min-h-0 flex-1 grid-cols-2">
+          <div className="grid min-w-0 grid-rows-[1fr_auto] border-r">
+            <div className="min-h-0">
+              <Editor
+                height="100%"
+                language={language}
+                value={text}
+                onChange={(value) => setText(value ?? "")}
+                onMount={(editor, monaco) => {
+                  editorRef.current = editor;
+                  monacoRef.current = monaco;
+                }}
+                options={{ minimap: { enabled: false }, wordWrap: "on" }}
+              />
+            </div>
+            <ProblemsPanel
+              diagnostics={diagnostics}
+              status={lintStatus}
+              onGoto={(line, column) => {
+                editorRef.current?.revealLineInCenter(line);
+                editorRef.current?.setPosition({ lineNumber: line, column });
+                editorRef.current?.focus();
               }}
-              options={{ minimap: { enabled: false }, wordWrap: "on" }}
             />
           </div>
-          <ProblemsPanel
-            diagnostics={diagnostics}
-            status={lintStatus}
-            onGoto={(line, column) => {
-              editorRef.current?.revealLineInCenter(line);
-              editorRef.current?.setPosition({ lineNumber: line, column });
-              editorRef.current?.focus();
-            }}
-          />
+          <div className="min-w-0 overflow-y-auto bg-white">
+            <SwaggerPreview source={debouncedText} />
+          </div>
         </div>
-        <div className="min-w-0 overflow-y-auto bg-white">
-          <SwaggerPreview source={debouncedText} />
+      ) : (
+        <div className="min-h-0 flex-1">
+          <Suspense
+            fallback={<p className="p-6 text-sm text-muted-foreground">加载可视化视图...</p>}
+          >
+            <VisualView source={debouncedText} />
+          </Suspense>
         </div>
-      </div>
+      )}
       <SaveDialog
         open={saveOpen}
         onOpenChange={setSaveOpen}
