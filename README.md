@@ -108,8 +108,9 @@
 ### 7.1 分期计划
 
 - **MVP（已实现）：** PAT 登录 → 仓库列表 → 分支 + OpenAPI 文件树 → Monaco + swagger-ui 双栏编辑 → 提交保存。
-- **二期：** 版本时间轴（listCommits + 历史 diff + 一键回滚）、Spectral 实时校验、OAuth Exchange 函数（可选）、部署上线（GitHub Pages / Vercel）。
+- **二期（已实现）：** 部署上线（GitHub Pages + Actions）、版本时间轴（提交历史 + 双基准 diff + 回滚）、Spectral 实时校验；OAuth Exchange 函数待外部账号就绪。
 - **三期：** 409 冲突三方可视化合并（jsdiff）、多分支协作（前端发起 PR）、Webhooks 通知联动。
+- **可视化接口管理（Apifox 式，规划中）：** 接口浏览 → 数据模型 → 可视化编辑 → 接口调试，四块分期推进，路线图见 `docs/superpowers/specs/2026-07-04-visual-api-management-roadmap.md`。
 
 ### 7.2 关键决策
 
