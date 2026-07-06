@@ -24,8 +24,14 @@ export const Route = createFileRoute("/_authed/repos/$owner/$repo/edit/$")({
     context.queryClient.ensureQueryData(
       fileQuery(params.owner, params.repo, params._splat ?? "", deps.ref),
     ),
-  component: EditPage,
+  component: EditPageWrapper,
 });
+
+function EditPageWrapper() {
+  const { owner, repo, _splat: filePath = "" } = Route.useParams();
+  const { ref } = Route.useSearch();
+  return <EditPage key={`${owner}/${repo}/${filePath}@${ref}`} />;
+}
 
 function EditPage() {
   const { owner, repo, _splat: filePath = "" } = Route.useParams();
