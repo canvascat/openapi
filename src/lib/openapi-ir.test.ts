@@ -136,6 +136,22 @@ describe("resolveSchema", () => {
     }
     expect(depth).toBeLessThanOrEqual(8);
   });
+
+  it("纯 $ref 链也计入深度上限", () => {
+    const chainDoc: Record<string, unknown> = { components: { schemas: {} } };
+    const schemas = (chainDoc.components as Record<string, unknown>).schemas as Record<
+      string,
+      unknown
+    >;
+    for (let i = 0; i < 20; i += 1) {
+      schemas[`S${i}`] =
+        i === 19
+          ? { type: "object", properties: { leaf: { type: "string" } } }
+          : { $ref: `#/components/schemas/S${i + 1}` };
+    }
+    const node = resolveSchema(chainDoc, { $ref: "#/components/schemas/S0" });
+    expect(node.children).toBeNull();
+  });
 });
 
 describe("getOperationDetail", () => {

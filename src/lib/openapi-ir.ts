@@ -144,7 +144,14 @@ export function resolveSchema(
     if (target === undefined) {
       return { ...base, refName: short };
     }
-    const resolved = resolveSchema(doc, target, new Set([...seenRefs, ref]), depth, name, required);
+    const resolved = resolveSchema(
+      doc,
+      target,
+      new Set([...seenRefs, ref]),
+      depth + 1,
+      name,
+      required,
+    );
     return { ...resolved, refName: short };
   }
 
