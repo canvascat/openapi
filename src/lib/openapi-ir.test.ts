@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildApiOverview } from "./openapi-ir";
+import { buildApiOverview, getOperationDetail, resolveSchema } from "./openapi-ir";
 
 const baseDoc = {
   openapi: "3.1.0",
@@ -57,5 +57,147 @@ describe("buildApiOverview", () => {
     const r = buildApiOverview({ openapi: "3.0.0", paths: { "/a": { get: {} } } });
     if (!r.ok) throw new Error("应当成功");
     expect(r.overview.title).toBe("未命名文档");
+  });
+});
+
+describe("resolveSchema", () => {
+  const doc = {
+    components: {
+      schemas: {
+        Pet: {
+          type: "object",
+          required: ["name"],
+          properties: {
+            name: { type: "string", description: "名称" },
+            status: { type: "string", enum: ["在售", "已售"] },
+            owner: { $ref: "#/components/schemas/Owner" },
+          },
+        },
+        Owner: {
+          type: "object",
+          properties: { pet: { $ref: "#/components/schemas/Pet" } },
+        },
+      },
+    },
+  };
+
+  it("object properties 与 required 列表", () => {
+    const node = resolveSchema(doc, { $ref: "#/components/schemas/Pet" });
+    expect(node.type).toBe("object");
+    expect(node.refName).toBe("Pet");
+    const name = node.children?.find((c) => c.name === "name");
+    expect(name?.required).toBe(true);
+    expect(name?.type).toBe("string");
+    expect(name?.description).toBe("名称");
+    const status = node.children?.find((c) => c.name === "status");
+    expect(status?.required).toBe(false);
+    expect(status?.enumValues).toEqual(["在售", "已售"]);
+  });
+
+  it("循环引用截断并标记 circular", () => {
+    const node = resolveSchema(doc, { $ref: "#/components/schemas/Pet" });
+    const owner = node.children?.find((c) => c.name === "owner");
+    const petAgain = owner?.children?.find((c) => c.name === "pet");
+    expect(petAgain?.circular).toBe(true);
+    expect(petAgain?.children).toBeNull();
+  });
+
+  it("未知/跨文件 $ref → type unknown + refName 保留", () => {
+    const node = resolveSchema(doc, { $ref: "./other.yaml#/X" });
+    expect(node.type).toBe("unknown");
+    expect(node.refName).toBe("X");
+  });
+
+  it("array items 作为单元素 children", () => {
+    const node = resolveSchema(doc, { type: "array", items: { type: "integer" } });
+    expect(node.type).toBe("array");
+    expect(node.children).toHaveLength(1);
+    expect(node.children?.[0].type).toBe("integer");
+  });
+
+  it("oneOf 显示为组合关键字，分支为 children", () => {
+    const node = resolveSchema(doc, {
+      oneOf: [{ type: "string" }, { type: "integer" }],
+    });
+    expect(node.type).toBe("oneOf");
+    expect(node.children).toHaveLength(2);
+  });
+
+  it("深度上限 8 层后 children 截断为 null", () => {
+    let deep: Record<string, unknown> = { type: "string" };
+    for (let i = 0; i < 12; i += 1) {
+      deep = { type: "object", properties: { next: deep } };
+    }
+    let node = resolveSchema(doc, deep);
+    let depth = 0;
+    while (node.children && node.children.length > 0) {
+      node = node.children[0];
+      depth += 1;
+    }
+    expect(depth).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("getOperationDetail", () => {
+  const doc = {
+    openapi: "3.1.0",
+    paths: {
+      "/pets/{id}": {
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "integer" } },
+          { name: "verbose", in: "query", schema: { type: "boolean" }, description: "路径级" },
+        ],
+        get: {
+          description: "查询宠物",
+          parameters: [
+            { name: "verbose", in: "query", schema: { type: "string" }, description: "接口级" },
+          ],
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { a: { type: "string" } } },
+              },
+            },
+          },
+          responses: {
+            default: { description: "兜底" },
+            "404": { description: "未找到" },
+            "200": {
+              description: "成功",
+              content: { "application/json": { schema: { type: "string" } } },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  it("合并 path 级与 operation 级参数，同名同 in 以 operation 级覆盖", () => {
+    const d = getOperationDetail(doc, "get", "/pets/{id}");
+    expect(d?.parameters).toHaveLength(2);
+    const verbose = d?.parameters.find((p) => p.name === "verbose");
+    expect(verbose?.description).toBe("接口级");
+    expect(verbose?.type).toBe("string");
+    const id = d?.parameters.find((p) => p.name === "id");
+    expect(id?.required).toBe(true);
+    expect(id?.location).toBe("path");
+  });
+
+  it("requestBody 取第一个 media type", () => {
+    const d = getOperationDetail(doc, "get", "/pets/{id}");
+    expect(d?.requestBody?.mediaType).toBe("application/json");
+    expect(d?.requestBody?.schema?.type).toBe("object");
+  });
+
+  it("responses 按状态码升序、default 置尾", () => {
+    const d = getOperationDetail(doc, "get", "/pets/{id}");
+    expect(d?.responses.map((r) => r.status)).toEqual(["200", "404", "default"]);
+    expect(d?.responses[0].schema?.type).toBe("string");
+    expect(d?.responses[1].schema).toBeNull();
+  });
+
+  it("找不到 operation 返回 null", () => {
+    expect(getOperationDetail(doc, "post", "/pets/{id}")).toBeNull();
+    expect(getOperationDetail(doc, "get", "/none")).toBeNull();
   });
 });
