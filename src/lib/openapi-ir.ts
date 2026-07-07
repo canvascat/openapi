@@ -338,7 +338,7 @@ function collectSchemaRefs(node: unknown, out: Set<string>): void {
   }
   const ref = node.$ref;
   if (typeof ref === "string" && ref.startsWith(SCHEMA_REF_PREFIX)) {
-    out.add(ref.slice(SCHEMA_REF_PREFIX.length));
+    out.add(ref.slice(SCHEMA_REF_PREFIX.length).replaceAll("~1", "/").replaceAll("~0", "~"));
   }
   for (const value of Object.values(node)) {
     collectSchemaRefs(value, out);

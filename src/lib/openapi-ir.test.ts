@@ -293,4 +293,25 @@ describe("buildSchemaRefIndex", () => {
   it("无 paths → 空索引", () => {
     expect(buildSchemaRefIndex({ components: { schemas: { A: {} } } })).toEqual({});
   });
+
+  it("schema 名含 / 时 JSON Pointer 转义引用可正确归位", () => {
+    const escapedDoc = {
+      openapi: "3.1.0",
+      components: { schemas: { "A/B": { type: "object" } } },
+      paths: {
+        "/y": {
+          get: {
+            responses: {
+              "200": {
+                content: {
+                  "application/json": { schema: { $ref: "#/components/schemas/A~1B" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(buildSchemaRefIndex(escapedDoc)["A/B"]).toEqual(["get /y"]);
+  });
 });
