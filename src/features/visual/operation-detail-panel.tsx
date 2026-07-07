@@ -76,7 +76,7 @@ export function OperationDetailPanel({
                 {detail.requestBody.mediaType}
               </Badge>
               {detail.requestBody.schema ? (
-                <SchemaTree node={detail.requestBody.schema} />
+                <SchemaTree key={operation.id} node={detail.requestBody.schema} />
               ) : (
                 <p className="text-sm text-muted-foreground">无 schema 定义</p>
               )}
@@ -101,7 +101,7 @@ export function OperationDetailPanel({
                     <span className="text-sm text-muted-foreground">{r.description}</span>
                   </div>
                   {r.schema ? (
-                    <SchemaTree node={r.schema} />
+                    <SchemaTree key={`${operation.id}:${r.status}`} node={r.schema} />
                   ) : (
                     <p className="text-sm text-muted-foreground">无响应体 schema</p>
                   )}
