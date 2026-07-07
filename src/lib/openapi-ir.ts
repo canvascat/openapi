@@ -323,3 +323,66 @@ export function getOperationDetail(
     responses,
   };
 }
+
+const SCHEMA_REF_PREFIX = "#/components/schemas/";
+
+function collectSchemaRefs(node: unknown, out: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectSchemaRefs(item, out);
+    }
+    return;
+  }
+  if (!isRecord(node)) {
+    return;
+  }
+  const ref = node.$ref;
+  if (typeof ref === "string" && ref.startsWith(SCHEMA_REF_PREFIX)) {
+    out.add(ref.slice(SCHEMA_REF_PREFIX.length));
+  }
+  for (const value of Object.values(node)) {
+    collectSchemaRefs(value, out);
+  }
+}
+
+export function listSchemaNames(doc: Record<string, unknown>): string[] {
+  const components = isRecord(doc.components) ? doc.components : {};
+  const schemas = isRecord(components.schemas) ? components.schemas : {};
+  return Object.keys(schemas);
+}
+
+export function buildSchemaRefIndex(doc: Record<string, unknown>): Record<string, string[]> {
+  const known = new Set(listSchemaNames(doc));
+  const index: Record<string, string[]> = {};
+  const paths = doc.paths;
+  if (!isRecord(paths)) {
+    return index;
+  }
+  for (const [path, item] of Object.entries(paths)) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    const pathLevelRefs = new Set<string>();
+    collectSchemaRefs(item.parameters, pathLevelRefs);
+    for (const method of HTTP_METHODS) {
+      const op = item[method];
+      if (!isRecord(op)) {
+        continue;
+      }
+      const id = `${method} ${path}`;
+      const refs = new Set<string>(pathLevelRefs);
+      collectSchemaRefs(op, refs);
+      for (const name of refs) {
+        if (!known.has(name)) {
+          continue;
+        }
+        const list = index[name] ?? [];
+        if (!list.includes(id)) {
+          list.push(id);
+        }
+        index[name] = list;
+      }
+    }
+  }
+  return index;
+}

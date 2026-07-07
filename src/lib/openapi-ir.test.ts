@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { buildApiOverview, getOperationDetail, resolveSchema } from "./openapi-ir";
+import {
+  buildApiOverview,
+  buildSchemaRefIndex,
+  getOperationDetail,
+  listSchemaNames,
+  resolveSchema,
+} from "./openapi-ir";
 
 const baseDoc = {
   openapi: "3.1.0",
@@ -215,5 +221,76 @@ describe("getOperationDetail", () => {
   it("找不到 operation 返回 null", () => {
     expect(getOperationDetail(doc, "post", "/pets/{id}")).toBeNull();
     expect(getOperationDetail(doc, "get", "/none")).toBeNull();
+  });
+});
+
+describe("listSchemaNames", () => {
+  it("保持定义顺序", () => {
+    expect(listSchemaNames({ components: { schemas: { B: {}, A: {} } } })).toEqual(["B", "A"]);
+  });
+
+  it("无 components/schemas → 空数组", () => {
+    expect(listSchemaNames({})).toEqual([]);
+    expect(listSchemaNames({ components: {} })).toEqual([]);
+  });
+});
+
+describe("buildSchemaRefIndex", () => {
+  const doc = {
+    openapi: "3.1.0",
+    components: {
+      schemas: { Pet: { type: "object" }, Err: { type: "object" }, Unused: { type: "string" } },
+    },
+    paths: {
+      "/pets": {
+        parameters: [{ name: "f", in: "query", schema: { $ref: "#/components/schemas/Err" } }],
+        get: {
+          responses: {
+            "200": {
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+            },
+          },
+        },
+        post: {
+          requestBody: {
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+          },
+          responses: {
+            "200": {
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+            },
+          },
+        },
+      },
+      "/x": {
+        get: {
+          responses: {
+            "200": {
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Ghost" } } },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  it("直接引用归属 operation，同接口多处引用去重", () => {
+    const index = buildSchemaRefIndex(doc);
+    expect(index.Pet).toEqual(["get /pets", "post /pets"]);
+  });
+
+  it("path 级 parameters 引用归属该 path 全部 operations", () => {
+    const index = buildSchemaRefIndex(doc);
+    expect(index.Err).toEqual(["get /pets", "post /pets"]);
+  });
+
+  it("悬空引用与无引用 schema 不出现键", () => {
+    const index = buildSchemaRefIndex(doc);
+    expect(index.Ghost).toBeUndefined();
+    expect(index.Unused).toBeUndefined();
+  });
+
+  it("无 paths → 空索引", () => {
+    expect(buildSchemaRefIndex({ components: { schemas: { A: {} } } })).toEqual({});
   });
 });
