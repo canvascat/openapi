@@ -69,8 +69,8 @@ export function buildSchemaRefIndex(doc: Record<string, unknown>): Record<string
 
 - `listSchemaNames` / `buildSchemaRefIndex` 单测（node）：定义序保持、无 components
   空数组；直接引用（requestBody/response/参数 schema 内 `$ref`）、path 级参数归属
-  全部 operations、同 schema 多处引用去重、悬空引用不入索引、无引用 schema 键存在
-  但数组为空（或不含键——以实现为准，测试锁定语义：`refIndex[name] ?? []` 消费）。
+  全部 operations、同 schema 多处引用去重、悬空引用不入索引；**语义敲定**：refIndex
+  只含有引用的 schema 键（无引用 schema 不出现在索引中），消费端一律 `refIndex[name] ?? []`。
 - `model-nav` 渲染测试（jsdom）：名称、计数徽标、选中回传、空态文案。
 - Tabs 切换、联动跳转：`vp dev` 手动 + 用户线上验证。
 
