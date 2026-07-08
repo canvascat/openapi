@@ -204,6 +204,7 @@ export interface ParameterRow {
   type: string;
   required: boolean;
   description: string;
+  origin: { level: "path" | "operation"; index: number };
 }
 
 export interface ResponseEntry {
@@ -219,7 +220,11 @@ export interface OperationDetail {
   responses: ResponseEntry[];
 }
 
-function toParameterRow(doc: Record<string, unknown>, raw: unknown): ParameterRow | null {
+function toParameterRow(
+  doc: Record<string, unknown>,
+  raw: unknown,
+  origin: { level: "path" | "operation"; index: number },
+): ParameterRow | null {
   let p = raw;
   if (isRecord(p) && typeof p.$ref === "string") {
     p = lookupRef(doc, p.$ref);
@@ -234,6 +239,7 @@ function toParameterRow(doc: Record<string, unknown>, raw: unknown): ParameterRo
     type: schema && typeof schema.type === "string" ? schema.type : "unknown",
     required: p.required === true,
     description: typeof p.description === "string" ? p.description : "",
+    origin,
   };
 }
 
@@ -273,12 +279,15 @@ export function getOperationDetail(
   }
 
   const merged = new Map<string, ParameterRow>();
-  for (const source of [item.parameters, op.parameters]) {
+  for (const [level, source] of [
+    ["path", item.parameters],
+    ["operation", op.parameters],
+  ] as const) {
     if (!Array.isArray(source)) {
       continue;
     }
-    for (const raw of source) {
-      const row = toParameterRow(doc, raw);
+    for (const [index, raw] of source.entries()) {
+      const row = toParameterRow(doc, raw, { level, index });
       if (row) {
         merged.set(`${row.location}:${row.name}`, row);
       }

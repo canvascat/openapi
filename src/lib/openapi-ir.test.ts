@@ -194,15 +194,17 @@ describe("getOperationDetail", () => {
     },
   };
 
-  it("合并 path 级与 operation 级参数，同名同 in 以 operation 级覆盖", () => {
+  it("合并 path 级与 operation 级参数，同名同 in 以 operation 级覆盖，并记录 origin", () => {
     const d = getOperationDetail(doc, "get", "/pets/{id}");
     expect(d?.parameters).toHaveLength(2);
     const verbose = d?.parameters.find((p) => p.name === "verbose");
     expect(verbose?.description).toBe("接口级");
     expect(verbose?.type).toBe("string");
+    expect(verbose?.origin).toEqual({ level: "operation", index: 0 });
     const id = d?.parameters.find((p) => p.name === "id");
     expect(id?.required).toBe(true);
     expect(id?.location).toBe("path");
+    expect(id?.origin).toEqual({ level: "path", index: 0 });
   });
 
   it("requestBody 取第一个 media type", () => {
