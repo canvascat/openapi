@@ -123,9 +123,9 @@ export function ParameterDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>位置</Label>
+            <Label htmlFor="param-location">位置</Label>
             <Select value={form.location} onValueChange={(v) => set("location", v)}>
-              <SelectTrigger>
+              <SelectTrigger id="param-location">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -138,9 +138,9 @@ export function ParameterDialog({
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>类型</Label>
+            <Label htmlFor="param-type">类型</Label>
             <Select value={form.type} onValueChange={(v) => set("type", v)}>
-              <SelectTrigger>
+              <SelectTrigger id="param-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
