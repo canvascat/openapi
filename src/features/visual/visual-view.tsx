@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseDocument } from "@/lib/openapi";
+import type { Edit } from "@/lib/openapi-edit";
 import {
   buildApiOverview,
   buildSchemaRefIndex,
@@ -22,7 +23,13 @@ function Notice({ text }: { text: string }) {
   return <p className="p-6 text-sm text-muted-foreground">{text}</p>;
 }
 
-export default function VisualView({ source }: { source: string }) {
+export default function VisualView({
+  source,
+  onEdit,
+}: {
+  source: string;
+  onEdit?: (edits: Edit[]) => void;
+}) {
   const parsed = useMemo(() => parseDocument(source), [source]);
   const ir = useMemo(() => (parsed.ok ? buildApiOverview(parsed.doc) : null), [parsed]);
   const schemaNames = useMemo(() => (parsed.ok ? listSchemaNames(parsed.doc) : []), [parsed]);
@@ -96,7 +103,7 @@ export default function VisualView({ source }: { source: string }) {
       <div className="min-h-0">
         {activeTab === "apis" ? (
           current ? (
-            <OperationDetailPanel doc={parsed.doc} operation={current} />
+            <OperationDetailPanel doc={parsed.doc} operation={current} onEdit={onEdit} />
           ) : (
             <Notice text="选择左侧接口查看详情。" />
           )
