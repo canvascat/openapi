@@ -4,7 +4,7 @@ import { clearToken, getOctokit, getToken, setToken } from "./session";
 
 describe("session", () => {
   beforeEach(() => {
-    localStorage.clear();
+    window.localStorage.clear();
     clearToken();
   });
 
@@ -15,7 +15,7 @@ describe("session", () => {
   it("setToken 后可读取，clearToken 后清空", () => {
     setToken("ghp_test");
     expect(getToken()).toBe("ghp_test");
-    expect(localStorage.getItem("openapi.github.pat")).toBe("ghp_test");
+    expect(window.localStorage.getItem("openapi.github.pat")).toBe("ghp_test");
     clearToken();
     expect(getToken()).toBeNull();
   });

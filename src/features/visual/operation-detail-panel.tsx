@@ -22,7 +22,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Edit } from "@/lib/openapi-edit";
-import { getOperationDetail, type OperationSummary, type ParameterRow } from "@/lib/openapi-ir";
+import {
+  getOperationDetail,
+  isRecord,
+  type OperationSummary,
+  type ParameterRow,
+} from "@/lib/openapi-ir";
 import { MethodBadge } from "./api-nav";
 import { EditOperationDialog } from "./edit-operation-dialog";
 import { ParameterDialog, type ParameterFormValue } from "./parameter-dialog";
@@ -38,6 +43,14 @@ export function OperationDetailPanel({
   onEdit?: (edits: Edit[]) => void;
 }) {
   const detail = getOperationDetail(doc, operation.method, operation.path);
+  const paths = isRecord(doc.paths) ? doc.paths : {};
+  const pathItemValue = paths[operation.path];
+  const pathItem = isRecord(pathItemValue) ? pathItemValue : {};
+  const rawOperationValue = pathItem[operation.method];
+  const rawOperation = isRecord(rawOperationValue) ? rawOperationValue : {};
+  const operationParameterCount = Array.isArray(rawOperation.parameters)
+    ? rawOperation.parameters.length
+    : 0;
   const [editOpOpen, setEditOpOpen] = useState(false);
   const [paramDialog, setParamDialog] = useState<
     | { mode: "create" }
@@ -225,7 +238,7 @@ export function OperationDetailPanel({
               ? ["paths", operation.path, "parameters"]
               : ["paths", operation.path, operation.method, "parameters"]
           }
-          existingCount={detail.parameters.length}
+          existingCount={operationParameterCount}
           initial={paramDialog.mode === "edit" ? paramDialog.initial : undefined}
           index={paramDialog.mode === "edit" ? paramDialog.origin.index : undefined}
           isPathLevel={paramDialog.mode === "edit" && paramDialog.origin.level === "path"}
