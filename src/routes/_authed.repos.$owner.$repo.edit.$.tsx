@@ -15,6 +15,7 @@ import { fileQuery, treeQuery } from "@/features/explorer/queries";
 import { ProblemsPanel } from "@/features/lint/problems-panel";
 import { useLint } from "@/features/lint/use-lint";
 import { classifyGithubError, saveFileContent } from "@/lib/github";
+import { applyEdits } from "@/lib/openapi-edit";
 
 const VisualView = lazy(() => import("@/features/visual/visual-view"));
 
@@ -209,7 +210,14 @@ function EditPage() {
           <Suspense
             fallback={<p className="p-6 text-sm text-muted-foreground">加载可视化视图...</p>}
           >
-            <VisualView source={debouncedText} />
+            <VisualView
+              source={debouncedText}
+              onEdit={(edits) => {
+                void applyEdits(text, language, edits)
+                  .then((next) => setText(next))
+                  .catch(() => toast.error("应用修改失败，请在源码模式确认文档结构"));
+              }}
+            />
           </Suspense>
         </div>
       )}
