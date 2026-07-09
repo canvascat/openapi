@@ -21,6 +21,23 @@ if (
   });
 }
 
+if (typeof window !== "undefined" && typeof window.ResizeObserver === "undefined") {
+  class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  Object.defineProperty(window, "ResizeObserver", {
+    configurable: true,
+    value: ResizeObserver,
+  });
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: ResizeObserver,
+  });
+}
+
 afterEach(() => {
   cleanup();
 });

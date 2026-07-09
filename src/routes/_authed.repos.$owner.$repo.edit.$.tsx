@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Code, History, LayoutList } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { clearToken, getOctokit } from "@/features/auth/session";
 import { HistorySheet } from "@/features/history/history-sheet";
@@ -176,35 +177,40 @@ function EditPage() {
         </div>
       </header>
       {viewMode === "code" ? (
-        <div className="grid min-h-0 flex-1 grid-cols-2">
-          <div className="grid min-w-0 grid-rows-[1fr_auto] border-r">
-            <div className="min-h-0">
-              <Editor
-                height="100%"
-                language={language}
-                value={text}
-                onChange={(value) => setText(value ?? "")}
-                onMount={(editor, monaco) => {
-                  editorRef.current = editor;
-                  monacoRef.current = monaco;
+        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+          <ResizablePanel defaultSize={50} minSize={35} maxSize={70} className="min-w-0">
+            <div className="grid h-full min-w-0 grid-rows-[1fr_auto]">
+              <div className="min-h-0">
+                <Editor
+                  height="100%"
+                  language={language}
+                  value={text}
+                  onChange={(value) => setText(value ?? "")}
+                  onMount={(editor, monaco) => {
+                    editorRef.current = editor;
+                    monacoRef.current = monaco;
+                  }}
+                  options={{ minimap: { enabled: false }, wordWrap: "on" }}
+                />
+              </div>
+              <ProblemsPanel
+                diagnostics={diagnostics}
+                status={lintStatus}
+                onGoto={(line, column) => {
+                  editorRef.current?.revealLineInCenter(line);
+                  editorRef.current?.setPosition({ lineNumber: line, column });
+                  editorRef.current?.focus();
                 }}
-                options={{ minimap: { enabled: false }, wordWrap: "on" }}
               />
             </div>
-            <ProblemsPanel
-              diagnostics={diagnostics}
-              status={lintStatus}
-              onGoto={(line, column) => {
-                editorRef.current?.revealLineInCenter(line);
-                editorRef.current?.setPosition({ lineNumber: line, column });
-                editorRef.current?.focus();
-              }}
-            />
-          </div>
-          <div className="min-w-0 overflow-y-auto bg-white">
-            <SwaggerPreview source={debouncedText} />
-          </div>
-        </div>
+          </ResizablePanel>
+          <ResizableHandle aria-label="调整源码与预览宽度" withHandle />
+          <ResizablePanel defaultSize={50} minSize={30} className="min-w-0">
+            <div className="h-full min-w-0 overflow-y-auto bg-white">
+              <SwaggerPreview source={debouncedText} />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       ) : (
         <div className="min-h-0 flex-1">
           <Suspense

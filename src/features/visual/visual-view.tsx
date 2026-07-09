@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseDocument } from "@/lib/openapi";
 import type { Edit } from "@/lib/openapi-edit";
@@ -61,63 +62,68 @@ export default function VisualView({
   };
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[320px_1fr]">
-      <div className="flex min-h-0 flex-col border-r">
-        <div className="shrink-0 truncate border-b px-3 py-2 text-sm font-semibold">
-          {ir.overview.title}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            OpenAPI {ir.overview.version}
-          </span>
+    <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
+      <ResizablePanel defaultSize={28} minSize={20} maxSize={42} className="min-w-0">
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 truncate border-b px-3 py-2 text-sm font-semibold">
+            {ir.overview.title}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              OpenAPI {ir.overview.version}
+            </span>
+          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as "apis" | "models")}
+            className="shrink-0 border-b px-2 py-1.5"
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="apis" className="flex-1">
+                接口
+              </TabsTrigger>
+              <TabsTrigger value="models" className="flex-1">
+                数据模型
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="min-h-0 flex-1">
+            {activeTab === "apis" ? (
+              <ApiNav
+                groups={ir.overview.groups}
+                selectedId={current?.id ?? null}
+                onSelect={setSelected}
+              />
+            ) : (
+              <ModelNav
+                names={schemaNames}
+                refIndex={refIndex}
+                selected={currentModel}
+                onSelect={setSelectedModel}
+              />
+            )}
+          </div>
         </div>
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "apis" | "models")}
-          className="shrink-0 border-b px-2 py-1.5"
-        >
-          <TabsList className="w-full">
-            <TabsTrigger value="apis" className="flex-1">
-              接口
-            </TabsTrigger>
-            <TabsTrigger value="models" className="flex-1">
-              数据模型
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="min-h-0 flex-1">
+      </ResizablePanel>
+      <ResizableHandle aria-label="调整可视模式侧栏宽度" withHandle />
+      <ResizablePanel defaultSize={72} minSize={45} className="min-w-0">
+        <div className="h-full min-h-0">
           {activeTab === "apis" ? (
-            <ApiNav
-              groups={ir.overview.groups}
-              selectedId={current?.id ?? null}
-              onSelect={setSelected}
+            current ? (
+              <OperationDetailPanel doc={parsed.doc} operation={current} onEdit={onEdit} />
+            ) : (
+              <Notice text="选择左侧接口查看详情。" />
+            )
+          ) : currentModel !== null ? (
+            <ModelDetailPanel
+              doc={parsed.doc}
+              name={currentModel}
+              refIndex={refIndex}
+              onGotoOperation={gotoOperation}
             />
           ) : (
-            <ModelNav
-              names={schemaNames}
-              refIndex={refIndex}
-              selected={currentModel}
-              onSelect={setSelectedModel}
-            />
+            <Notice text="该文档没有定义数据模型。" />
           )}
         </div>
-      </div>
-      <div className="min-h-0">
-        {activeTab === "apis" ? (
-          current ? (
-            <OperationDetailPanel doc={parsed.doc} operation={current} onEdit={onEdit} />
-          ) : (
-            <Notice text="选择左侧接口查看详情。" />
-          )
-        ) : currentModel !== null ? (
-          <ModelDetailPanel
-            doc={parsed.doc}
-            name={currentModel}
-            refIndex={refIndex}
-            onGotoOperation={gotoOperation}
-          />
-        ) : (
-          <Notice text="该文档没有定义数据模型。" />
-        )}
-      </div>
-    </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
