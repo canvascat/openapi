@@ -63,7 +63,7 @@ export default function VisualView({
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0">
-      <ResizablePanel defaultSize={28} minSize={20} maxSize={42} className="min-w-0">
+      <ResizablePanel defaultSize={28} minSize={20} maxSize={60} className="min-w-0">
         <div className="flex h-full min-h-0 flex-col">
           <div className="shrink-0 truncate border-b px-3 py-2 text-sm font-semibold">
             {ir.overview.title}
@@ -104,7 +104,7 @@ export default function VisualView({
         </div>
       </ResizablePanel>
       <ResizableHandle aria-label="调整可视模式侧栏宽度" withHandle />
-      <ResizablePanel defaultSize={72} minSize={45} className="min-w-0">
+      <ResizablePanel defaultSize={72} minSize={35} className="min-w-0">
         <div className="h-full min-h-0">
           {activeTab === "apis" ? (
             current ? (
